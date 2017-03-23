@@ -3,63 +3,6 @@
 # Ilia 23.03.2017
 
 ################################################
-## Load Data (rough, rewrite as loader function)
-################################################
-library(caret)
-
-data_input <- as.data.frame(iris)
-
-# X (scale)
-scalemax <- function(x){x/max(x)}
-x_data <- as.list(as.data.frame(t(scalemax(data_input[c(1:4)]))))
-# y (one-hot-encode)
-dmy <- dummyVars(" ~ Species", data=data_input)
-y_data <- as.list(as.data.frame(t(predict(dmy, newdata = data_input))))
-
-# Create full data vector (combining the X and y)
-all_data <- list()
-for (i in 1:length(x_data)){
-  all_data[[i]] <- c(x_data[i], y_data[i])
-}
-
-# Shuffle before splitting
-all_data <- sample(all_data)
-# Split to training and test
-training_data <- all_data[1:100]
-testing_data <- all_data[101:150]
-
-################################################
-## RUN
-################################################
-
-# Step 1. Initialise nueral network (bias and weights for layers)
-# Tested only with one hidden layer
-create_neural_net <- neuralnetwork(c(4, 6, 3))
-
-sizes <- create_neural_net[[1]]
-num_layers <- create_neural_net[[2]]
-biases <- create_neural_net[[3]]
-weights <- create_neural_net[[4]]
-
-# Step 2. Train NN using SGD
-trained_net <- SGD(training_data=training_data,
-                   epochs=1000, 
-                   mini_batch_size=10,
-                   lr=0.3,
-                   biases=biases, 
-                   weights=weights)
-
-print("Biase After: ")
-biases <- trained_net[[1]]
-#print(biases)
-print("Weights After: ")
-weights <- trained_net[[-1]]
-#print(weights)
-
-# Accuracy
-evaluate(testing_data, biases, weights)  # 0.98
-
-################################################
 ## FUNCTIONS
 ################################################
 
@@ -76,10 +19,20 @@ cost_derivative <- function(output_activations, y){output_activations-y}
 neuralnetwork <- function(sizes)
 {
   num_layers <- length(sizes)
-  # Gaussian distribution for biases and weights
-  biases <- sapply(sizes[-1], function(f) {matrix(rnorm(n=f), nrow=f, ncol=1)})
-  weights <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
-    matrix(rnorm(n=f[1]*f[2]), nrow=f[2], ncol=f[1])})
+  listw <- sizes[1:length(sizes)-1] # Skip last (weights from 1st to 2nd-to-last)
+  listb <-  sizes[-1]  # Skip first element (biases from 2nd to last)
+  
+  # Initialise with gaussian distribution for biases and weights
+  biases <- lapply(seq_along(listb), function(idx){
+    r <- listb[[idx]]
+    matrix(rnorm(n=r), nrow=r, ncol=1)
+  })
+  weights <- lapply(seq_along(listb), function(idx){
+    c <- listw[[idx]]
+    r <- listb[[idx]]
+    matrix(rnorm(n=r*c), nrow=r, ncol=c)
+  })
+  
   # Return
   list(sizes, num_layers, biases, weights)
 }
@@ -130,10 +83,20 @@ SGD <- function(training_data, epochs, mini_batch_size, lr, biases, weights)
 update_mini_batch <- function(mini_batch, lr, biases, weights)
 {
   nmb <- length(mini_batch)
+  listw <- sizes[1:length(sizes)-1] 
+  listb <-  sizes[-1]  
+  
   # Initialise updates with zero vectors (for EACH mini-batch)
-  nabla_b <- sapply(sizes[-1], function(f) {matrix(0, nrow=f, ncol=1)})
-  nabla_w <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
-    matrix(0, nrow=f[2], ncol=f[1])})
+  nabla_b <- lapply(seq_along(listb), function(idx){
+    r <- listb[[idx]]
+    matrix(0, nrow=r, ncol=1)
+  })
+  nabla_w <- lapply(seq_along(listb), function(idx){
+    c <- listw[[idx]]
+    r <- listb[[idx]]
+    matrix(0, nrow=r, ncol=c)
+  })  
+  
   # Go through mini_batch
   for (i in 1:nmb){
     x <- mini_batch[[i]][[1]]
@@ -167,9 +130,20 @@ update_mini_batch <- function(mini_batch, lr, biases, weights)
 backprop <- function(x, y, biases, weights)
 {
   # Initialise updates with zero vectors
-  nabla_b_backprop <- sapply(sizes[-1], function(f) {matrix(0, nrow=f, ncol=1)})
-  nabla_w_backprop <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
-    matrix(0, nrow=f[2], ncol=f[1])})
+  listw <- sizes[1:length(sizes)-1] 
+  listb <-  sizes[-1]  
+  
+  # Initialise updates with zero vectors (for EACH mini-batch)
+  nabla_b_backprop <- lapply(seq_along(listb), function(idx){
+    r <- listb[[idx]]
+    matrix(0, nrow=r, ncol=1)
+  })
+  nabla_w_backprop <- lapply(seq_along(listb), function(idx){
+    c <- listw[[idx]]
+    r <- listb[[idx]]
+    matrix(0, nrow=r, ncol=c)
+  })  
+  
   # First:
   # Feed-forward (get predictions)
   activation <- matrix(x, nrow=length(x), ncol=1)
@@ -226,5 +200,62 @@ evaluate <- function(testing_data, biases, weights)
   # Return accuracy
   correct/total
 }
+
+################################################
+## Load Data (rough, rewrite as loader function)
+################################################
+library(caret)
+
+data_input <- as.data.frame(iris)
+
+# X (scale)
+scalemax <- function(x){x/max(x)}
+x_data <- as.list(as.data.frame(t(scalemax(data_input[c(1:4)]))))
+# y (one-hot-encode)
+dmy <- dummyVars(" ~ Species", data=data_input)
+y_data <- as.list(as.data.frame(t(predict(dmy, newdata = data_input))))
+
+# Create full data vector (combining the X and y)
+all_data <- list()
+for (i in 1:length(x_data)){
+  all_data[[i]] <- c(x_data[i], y_data[i])
+}
+
+# Shuffle before splitting
+all_data <- sample(all_data)
+# Split to training and test
+training_data <- all_data[1:75]
+testing_data <- all_data[76:150]
+
+################################################
+## RUN
+################################################
+
+# Step 1. Initialise nueral network (bias and weights for layers)
+# Tested only with one hidden layer
+create_neural_net <- neuralnetwork(c(4, 6, 4, 3))
+
+sizes <- create_neural_net[[1]]
+num_layers <- create_neural_net[[2]]
+biases <- create_neural_net[[3]]
+weights <- create_neural_net[[4]]
+
+# Step 2. Train NN using SGD
+trained_net <- SGD(training_data=training_data,
+                   epochs=1000, 
+                   mini_batch_size=10,
+                   lr=0.3,
+                   biases=biases, 
+                   weights=weights)
+
+print("Biase After: ")
+biases <- trained_net[[1]]
+#print(biases)
+print("Weights After: ")
+weights <- trained_net[[-1]]
+#print(weights)
+
+# Accuracy
+evaluate(testing_data, biases, weights)  # 100% accuracy
 
 
