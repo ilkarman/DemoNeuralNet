@@ -51,12 +51,13 @@ SGD <- function(training_data, epochs, mini_batch_size, lr)
     # Logging
     cat("Epoch: ", j, " complete")
   }
-  
 }
 
-d <- rpois(73,5)
-mini_batch_size <- 5
-d_split <- split(d, ceiling(seq_along(d)/mini_batch_size))
+# TODO!
+update_mini_batch(mini_batch, lr)
+{
+  
+}
 
 ###############################
 ## EVALUATE (Compare to Python)
