@@ -2,6 +2,22 @@
 #1. [-1] in R removes first element NOT takes last
 #2. for (i in 1:2) in R does include 2
 
+# Example of train_data
+train_data_0 <- list(
+  c(0.88607595, 
+    0.40506329,
+    0.59493671,
+    0.17721519),
+  c(0,1,0))
+train_data_1 <- list(
+  c(0.70886076, 
+    0.37974684,
+    0.56962025,
+    0.18987342),
+  c(0,1,0))
+
+training_data <- list(train_data_0, train_data_1)
+
 sigmoid <- function(z){1.0/(1.0+exp(-z))}
 
 sigmoid_prime <- function(z){sigmoid(z)*(1-sigmoid(z))}
@@ -41,7 +57,7 @@ feedforward <- function(a)
 SGD <- function(training_data, epochs, mini_batch_size, lr)
 {
   #epochs <- 10 # Debug
-  #mini_batch_size <- 2 # Debug
+  mini_batch_size <- 2 # Debug
   n <- length(training_data)
   for (j in 1:epochs){
     # Stochastic mini-batch
@@ -60,7 +76,7 @@ SGD <- function(training_data, epochs, mini_batch_size, lr)
 
 update_mini_batch <- function(mini_batch, lr)
 {
-  #mini_batch <- mini_batches[[1]] # TEMP
+  mini_batch <- mini_batches[[1]] # TEMP
   lr <- 0.2 # TEMP
   nmb <- length(mini_batch)
   # Initialise updates with zero vectors
@@ -78,26 +94,25 @@ update_mini_batch <- function(mini_batch, lr)
     delta_nabla_b <- delta_nablas[[1]]
     delta_nabla_w <- delta_nablas[[-1]]
     
-    # These don't look correct
     # The python is:
     # nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
     # nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
     nabla_b <- lapply(seq_along(biases),function(j)
-      unlist(nabla_b[j])+unlist(delta_nabla_b[j]))
+      unlist(nabla_b[[j]])+unlist(delta_nabla_b[[j]]))
     nabla_w <- lapply(seq_along(weights),function(j)
-      unlist(nabla_w[j])+unlist(delta_nabla_w[j]))
+      unlist(nabla_w[[j]])+unlist(delta_nabla_w[[j]]))
   }
+  
   # Opposite direction of gradient
   # TODO!!
   # This should overwrite global (i.e. self.weights)
   # I understand below is wrong, but need help to rewrite as OO
   # Hmm I think these are wrong?
-  
   # Fix thesE:
   weights <- lapply(seq_along(weights), function(j)
-    unlist(weights[j])-(lr/nmb)*unlist(nabla_w[j]))
+    unlist(weights[[j]])-(lr/nmb)*unlist(nabla_w[[j]]))
   biases <- lapply(seq_along(biases), function(j)
-    unlist(biases[j])-(lr/nmb)*unlist(nabla_b[j]))
+    unlist(biases[[j]])-(lr/nmb)*unlist(nabla_b[[j]]))
 }
 
 backprop <- function(x, y)
@@ -156,52 +171,37 @@ evaluate <- function(test_data)
 ## check that R script matches
 ###############################
 
-sizes <- c(3, 5, 2)
-
-biases <- list(
-  matrix(c(-0.28080838, 
-           0.2316751,
-           0.87261225,
-           -0.96765989,
-           -1.868544), 
-         nrow=5, ncol=1, byrow=TRUE),
-  matrix(c(2.10775394,
-           0.41855275), 
-         nrow=2, ncol=1, byrow=TRUE)
-  )
-
-weights <- list(
-  matrix(c(-0.81267026, 0.17627318, -0.60639905, 
-           0.50974091, 2.34693197, 0.33875867,
-           -1.20632438, -1.25457351, -1.17803266,
-           0.06163412, 0.61925722,  0.87939343, 
-           -0.41764508, -0.28984466,  0.09663896), 
-         nrow=5, ncol=3, byrow = TRUE),
-  matrix(c(0.37480004, 0.04123139, 1.5200263, -2.02504715, 0.2665885, 
-           1.1946554, 0.18426967, -0.16337889, -0.91305046, 0.05401374), 
-         nrow=2, ncol=5, byrow = TRUE))
+# sizes <- c(3, 5, 2)
+# 
+# biases <- list(
+#   matrix(c(-0.28080838, 
+#            0.2316751,
+#            0.87261225,
+#            -0.96765989,
+#            -1.868544), 
+#          nrow=5, ncol=1, byrow=TRUE),
+#   matrix(c(2.10775394,
+#            0.41855275), 
+#          nrow=2, ncol=1, byrow=TRUE)
+#   )
+# 
+# weights <- list(
+#   matrix(c(-0.81267026, 0.17627318, -0.60639905, 
+#            0.50974091, 2.34693197, 0.33875867,
+#            -1.20632438, -1.25457351, -1.17803266,
+#            0.06163412, 0.61925722,  0.87939343, 
+#            -0.41764508, -0.28984466,  0.09663896), 
+#          nrow=5, ncol=3, byrow = TRUE),
+#   matrix(c(0.37480004, 0.04123139, 1.5200263, -2.02504715, 0.2665885, 
+#            1.1946554, 0.18426967, -0.16337889, -0.91305046, 0.05401374), 
+#          nrow=2, ncol=5, byrow = TRUE))
 
 # Should be:
 #(2, 3)
 #[[ 0.92956719  0.92438907  0.91830857],
 #[ 0.64309165  0.6703279   0.63000043]]
-result_test <- feedforward(0.5)
-dim(result_test)
-result_test # CORRECT!
+#result_test <- feedforward(0.5)
+#dim(result_test)
+#result_test # CORRECT!
 
-# Example of train_data
-train_data_0 <- list(
-  c(0.88607595, 
-     0.40506329,
-     0.59493671,
-     0.17721519),
-  c(0,1,0))
-train_data_1 <- list(
-  c(0.70886076, 
-    0.37974684,
-    0.56962025,
-    0.18987342),
-  c(0,1,0))
-
-training_data <- list(train_data_0, train_data_1)
 
