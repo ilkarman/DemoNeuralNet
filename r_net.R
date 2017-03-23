@@ -4,45 +4,48 @@
 #1. [-1] in R removes first element NOT takes last
 #2. for (i in 1:2) in R does include 2
 
-# Example of train_data
-train_data_0 <- list(
-  c(0.88607595, 
-    0.40506329,
-    0.59493671,
-    0.17721519),
-  c(0,1,0))
-train_data_1 <- list(
-  c(0.70886076, 
-    0.37974684,
-    0.56962025,
-    0.18987342),
-  c(0,1,0))
+################################################
+## Load Data
+################################################
+library(caret)
 
-training_data <- list(train_data_0, train_data_1)
+x_data <- as.list(as.data.frame(t(iris[c(1:4)])))
+dmy <- dummyVars(" ~ Species", data=iris)
+y_data <- as.list(as.data.frame(t(predict(dmy, newdata = iris))))
 
-# RUN
-create_neural_net <- neuralnetwork(c(4, 7, 3))
+all_data <- list()
+for (i in 1:length(x_data)){
+  all_data[[i]] <- c(x_data[i], y_data[i])
+}
+
+training_data <- all_data[1:100]
+testing_data <- all_data[101:150]
+
+################################################
+## RUN
+################################################
+create_neural_net <- neuralnetwork(c(4, 6, 3))
 
 sizes <- create_neural_net[[1]]
 num_layers <- create_neural_net[[2]]
 biases <- create_neural_net[[3]]
 weights <- create_neural_net[[4]]
 
-print("Biase Before: ")
-print(biases)
-
 trained_net <- SGD(training_data=training_data,
-                   epochs=10, 
-                   mini_batch_size=1,
-                   lr=0.5,
+                   epochs=1000, 
+                   mini_batch_size=10,
+                   lr=30,
                    biases=biases, 
                    weights=weights)
 
 print("Biase After: ")
 print(trained_net[[1]])
+print("Weights After: ")
+print(trained_net[[-1]])
 
 ################################################
-
+## FUNCTIONS
+################################################
 
 sigmoid <- function(z){1.0/(1.0+exp(-z))}
 
@@ -54,9 +57,31 @@ cost_derivative <- function(output_activations, y){output_activations-y}
 neuralnetwork <- function(sizes)
 {
   num_layers <- length(sizes)
+  # FIX to reproduce python script
+  sizes <- c(4, 6, 3)
   biases <- sapply(sizes[-1], function(f) {matrix(rnorm(n=f), nrow=f, ncol=1)})
+  # FIX to reproduce python script
+  biases <- list(
+    matrix(c(2.21552528,0.56221113,1.29356006,0.20183309,-0.24909272,0.1880131),nrow=6, ncol=1, byrow=TRUE),
+    matrix(c(-0.55172029,0.62177897,0.54538667),nrow=3, ncol=1, byrow=TRUE))
   weights <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
     matrix(rnorm(n=f[1]*f[2]), nrow=f[2], ncol=f[1])})
+  # FIX to reproduce python script
+  weights <- list(
+    matrix(c(
+      -1.59478751, -1.49475559, -0.28792213, -1.49318205,
+      0.46775273,  0.55212408, -0.09821697,  2.16442781,
+      -1.09225776, -0.50294527,  0.6827888 ,  1.26445372,
+      0.05535019,  2.24894183,  1.76910817, -0.58362259,
+      -0.88872193,  1.77267107,  1.91067743,  1.1684327,
+      0.74813106, -0.28986976,  2.1845845 , -0.870942), nrow=6, ncol=4, byrow=TRUE),
+    matrix(c(
+      0.71380675, -1.1651045 , -0.44106224,
+      -0.46050179, -0.6196771, 1.02890824,
+      -0.04386169, -0.57472911,  0.64076485,
+      -0.34151746,  0.08611568, 0.6652118,
+      -1.01254895,  0.51042568, -1.09556564,
+      -0.67983253,  1.23153594, -1.24757605), nrow=3, ncol=6, byrow=TRUE))
   # Return
   list(sizes, num_layers, biases, weights)
 }
@@ -88,7 +113,7 @@ SGD <- function(training_data, epochs, mini_batch_size, lr, biases, weights)
   n <- length(training_data)
   for (j in 1:epochs){
     # Stochastic mini-batch
-    training_data <- sample(training_data)
+    #training_data <- sample(training_data)
     # Partition set into mini-batches
     mini_batches <- split(training_data, 
                           ceiling(seq_along(training_data)/mini_batch_size))
