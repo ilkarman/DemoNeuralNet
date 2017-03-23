@@ -1,9 +1,16 @@
+# NOTE to self: 
+#1. [-1] in R removes first element NOT takes last
+#2. for (i in 1:2) in R does include 2
+
 sigmoid <- function(z){1.0/(1.0+exp(-z))}
 
 sigmoid_prime <- function(z){sigmoid(z)*(1-sigmoid(z))}
 
+cost_derivative <- function(output_activations, y){output_activations-y}
+
 neuralnetwork <- function(sizes)
 {
+  sizes <- c(4, 7, 3)  # DEBUG
   num_layers <- length(sizes)
   biases <- sapply(sizes[-1], function(f) {matrix(rnorm(n=f), nrow=f, ncol=1)})
   weights <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
@@ -53,7 +60,8 @@ SGD <- function(training_data, epochs, mini_batch_size, lr)
 
 update_mini_batch <- function(mini_batch, lr)
 {
-  mini_batch <- mini_batches[[1]]  # DEBUG
+  #mini_batch <- mini_batches[[1]] # TEMP
+  lr <- 0.2 # TEMP
   nmb <- length(mini_batch)
   # Initialise updates with zero vectors
   nabla_b <- sapply(sizes[-1], function(f) {matrix(0, nrow=f, ncol=1)})
@@ -61,15 +69,16 @@ update_mini_batch <- function(mini_batch, lr)
     matrix(0, nrow=f[2], ncol=f[1])})
   # Go through mini_batch
   for (i in 1:nmb){
+    i <- 1 # temp
     x <- mini_batch[[i]][[1]]
     y <- mini_batch[[i]][[-1]]
+    
     # Back propogatoin will return delta
-    
-    # Create function (TODO!)
     delta_nablas <- backprop(x, y)
-    
     delta_nabla_b <- delta_nablas[[1]]
     delta_nabla_w <- delta_nablas[[-1]]
+    
+    # These don't look correct
     nabla_b <- lapply(seq_along(biases),function(j)
       unlist(nabla_b[j])+unlist(delta_nabla_b[j]))
     nabla_w <- lapply(seq_along(weights),function(j)
@@ -79,23 +88,26 @@ update_mini_batch <- function(mini_batch, lr)
   # TODO!!
   # This should overwrite global (i.e. self.weights)
   # I understand below is wrong, but need help to rewrite as OO
+  # Hmm I think these are wrong?
+  
+  # Fix thesE:
   weights <- lapply(seq_along(weights), function(j)
     unlist(weights[j])-(lr/nmb)*unlist(nabla_w[j]))
   biases <- lapply(seq_along(biases), function(j)
     unlist(biases[j])-(lr/nmb)*unlist(nabla_b[j]))
 }
 
-# TODO!
 backprop <- function(x, y)
 {
+
   # Initialise updates with zero vectors
-  nabla_b <- sapply(sizes[-1], function(f) {matrix(0, nrow=f, ncol=1)})
-  nabla_w <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
+  nabla_b_backprop <- sapply(sizes[-1], function(f) {matrix(0, nrow=f, ncol=1)})
+  nabla_w_backprop <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
     matrix(0, nrow=f[2], ncol=f[1])})
   
-  # Feed-forward (get errors)
-  activation <- x
-  activations <- list(x)
+  # Feed-forward (get predictions)
+  activation <- matrix(x, nrow=length(x), ncol=1)
+  activations <- list(matrix(x, nrow=length(x), ncol=1))
   # z = f(w.x + b)
   # So need zs to store all z-vectors
   zs <- list()
@@ -103,24 +115,37 @@ backprop <- function(x, y)
     b <- biases[[f]]
     w <- weights[[f]]
     
-    w_a <- if(is.null(dim(activation))) w*activation else w%*%activation
+    w_a <- w%*%activation
     b_broadcast <- matrix(b, nrow=dim(w_a)[1], ncol=dim(w_a)[-1])
-    z <- w_a + b_broadcast
+    z <- w_a + b
     zs[[f]] <- z
     activation <- sigmoid(z)
     # Activations already contains init element
     activations[[f+1]] <- activation
   }
   
-  # Backwards (update gradient)
-  
-
+  # Backwards (update gradient using errors)
+  # Last layer
+  sp <- sigmoid_prime(zs[[length(zs)]])
+  delta <- cost_derivative(activations[[length(activations)]], y) * sp
+  nabla_b_backprop[[length(nabla_b_backprop)]] <- delta
+  nabla_w_backprop[[length(nabla_w_backprop)]] <- delta %*% t(activations[[length(activations)-1]])
+  # Second to second-to-last-layer
+  for (k in 2:(num_layers-1)) {
+    sp <- sigmoid_prime(zs[[length(zs)-(k-1)]])
+    delta <- (t(weights[[length(weights)-(k-2)]]) %*% delta) * sp
+    nabla_b_backprop[[length(nabla_b_backprop)-(k-1)]] <- delta
+    testyy <- t(activations[[length(activations)-k]])
+    nabla_w_backprop[[length(nabla_w_backprop)-(k-1)]] <- delta %*% testyy
+  }
+  # return (nabla_b, nabla_w)
+  return_nabla <- list(nabla_b_backprop, nabla_w_backprop)
+  return_nabla
 }
 
 # TODO!
 evaluate <- function(test_data)
 
-cost_derivative <- function(output_activations, y){output_activations-y}
 
 ###############################
 ## EVALUATE (Compare to Python)
