@@ -78,6 +78,7 @@ update_mini_batch <- function(mini_batch, lr)
   # Opposite direction of gradient
   # TODO!!
   # This should overwrite global (i.e. self.weights)
+  # I understand below is wrong, but need help to rewrite as OO
   weights <- lapply(seq_along(weights), function(j)
     unlist(weights[j])-(lr/nmb)*unlist(nabla_w[j]))
   biases <- lapply(seq_along(biases), function(j)
@@ -87,7 +88,33 @@ update_mini_batch <- function(mini_batch, lr)
 # TODO!
 backprop <- function(x, y)
 {
+  # Initialise updates with zero vectors
+  nabla_b <- sapply(sizes[-1], function(f) {matrix(0, nrow=f, ncol=1)})
+  nabla_w <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
+    matrix(0, nrow=f[2], ncol=f[1])})
   
+  # Feed-forward (get errors)
+  activation <- x
+  activations <- list(x)
+  # z = f(w.x + b)
+  # So need zs to store all z-vectors
+  zs <- list()
+  for (f in 1:length(biases)){
+    b <- biases[[f]]
+    w <- weights[[f]]
+    
+    w_a <- if(is.null(dim(activation))) w*activation else w%*%activation
+    b_broadcast <- matrix(b, nrow=dim(w_a)[1], ncol=dim(w_a)[-1])
+    z <- w_a + b_broadcast
+    zs[[f]] <- z
+    activation <- sigmoid(z)
+    # Activations already contains init element
+    activations[[f+1]] <- activation
+  }
+  
+  # Backwards (update gradient)
+  
+
 }
 
 # TODO!
