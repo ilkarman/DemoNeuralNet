@@ -69,9 +69,17 @@ update_mini_batch(mini_batch, lr)
     delta_nablas <- backprop(x, y)
     delta_nabla_b <- delta_nablas[[1]]
     delta_nabla_w <- delta_nablas[[-1]]
+    nabla_b <- lapply(seq_along(biases),function(j)
+      unlist(nabla_b[j])+unlist(delta_nabla_b[j]))
+    nabla_w <- lapply(seq_along(weights),function(j)
+      unlist(nabla_w[j])+unlist(delta_nabla_w[j]))
   }
+  # Opposite direction of gradient
+  # TODO!!
 
 }
+
+a, b <- c(1,2)
 
 ###############################
 ## EVALUATE (Compare to Python)
