@@ -7,8 +7,7 @@ neuralnetwork <- function(sizes)
   num_layers <- length(sizes)
   biases <- sapply(sizes[-1], function(f) {matrix(rnorm(n=f), nrow=f, ncol=1)})
   weights <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
-    matrix(rnorm(n=f[1]*f[2]), nrow=f[2], ncol=f[1])
-  })
+    matrix(rnorm(n=f[1]*f[2]), nrow=f[2], ncol=f[1])})
 }
 
 feedforward <- function(a)
@@ -35,7 +34,7 @@ feedforward <- function(a)
 SGD <- function(training_data, epochs, mini_batch_size, lr)
 {
   #epochs <- 10 # Debug
-  #mini_batch_size <- 1 # Debug
+  #mini_batch_size <- 2 # Debug
   n <- length(training_data)
   for (j in 1:epochs){
     # Stochastic mini-batch
@@ -45,7 +44,6 @@ SGD <- function(training_data, epochs, mini_batch_size, lr)
                           ceiling(seq_along(training_data)/mini_batch_size))
     # Feed forward all mini-batch
     for (k in 1:length(mini_batches)) {
-      # Create function (TODO!)
       update_mini_batch(mini_batches[[k]])
     }
     # Logging
@@ -56,7 +54,23 @@ SGD <- function(training_data, epochs, mini_batch_size, lr)
 # TODO!
 update_mini_batch(mini_batch, lr)
 {
-  
+  mini_batch <- mini_batches[[1]]  # DEBUG
+  nmb <- length(mini_batch)
+  # Initialise updates with zero vectors
+  nabla_b <- sapply(sizes[-1], function(f) {matrix(0, nrow=f, ncol=1)})
+  nabla_w <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
+    matrix(0, nrow=f[2], ncol=f[1])})
+  # Go through mini_batch
+  for (i in 1:nmb){
+    x <- mini_batch[[i]][[1]]
+    y <- mini_batch[[i]][[-1]]
+    # Back propogatoin will return delta
+    # Create function (TODO!)
+    delta_nablas <- backprop(x, y)
+    delta_nabla_b <- delta_nablas[[1]]
+    delta_nabla_w <- delta_nablas[[-1]]
+  }
+
 }
 
 ###############################
