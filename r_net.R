@@ -5,11 +5,11 @@
 #2. for (i in 1:2) in R does include 2
 
 ################################################
-## Load Data
+## Load Data (rough, rewrite as loader function)
 ################################################
 library(caret)
 
-data_input <- as.data.frame(iris)
+data_input <- as.data.frame(data(iris))
 
 # X (scale)
 scalemax <- function(x){x/max(x)}
@@ -24,7 +24,7 @@ for (i in 1:length(x_data)){
   all_data[[i]] <- c(x_data[i], y_data[i])
 }
 
-# Shufle
+# Shuffle
 all_data <- sample(all_data)
 # Split to training and test
 training_data <- all_data[1:100]
@@ -55,7 +55,7 @@ weights <- trained_net[[-1]]
 #print(weights)
 
 # Accuracy
-evaluate(testing_data, biases, weights)
+evaluate(testing_data, biases, weights)  # 0.96
 
 ################################################
 ## FUNCTIONS
