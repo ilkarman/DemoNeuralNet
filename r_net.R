@@ -4,7 +4,6 @@ sigmoid_prime <- function(z){sigmoid(z)*(1-sigmoid(z))}
 
 neuralnetwork <- function(sizes)
 {
-  sizes <- c(3, 5, 2)
   num_layers <- length(sizes)
   biases <- sapply(sizes[-1], function(f) {matrix(rnorm(n=f), nrow=f, ncol=1)})
   weights <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
@@ -17,6 +16,10 @@ feedforward <- function(a)
   for (f in 1:length(biases)){
     b <- biases[[f]]
     w <- weights[[f]]
+    
+    # Seriously? All I want to replicate is:
+    # (py) a = sigmoid(np.dot(w, a) + b)
+    
     # Equivalent of python np.dot(w,a)
     w_a <- if(is.null(dim(a))) w*a else w%*%a
     # Need to manually broadcast b to conform to np.dot(w,a)
@@ -28,14 +31,40 @@ feedforward <- function(a)
 
 # Complete (and tested up to this point) ...
 
-SGD <- function(something)
+# Ignore validation data for now
+SGD <- function(training_data, epochs, mini_batch_size, lr)
 {
-  # TODO
+  #epochs <- 10 # Debug
+  #mini_batch_size <- 1 # Debug
+  n <- length(training_data)
+  for (j in 1:epochs){
+    # Stochastic mini-batch
+    training_data <- sample(training_data)
+    # Partition set into mini-batches
+    mini_batches <- split(training_data, 
+                          ceiling(seq_along(training_data)/mini_batch_size))
+    # Feed forward all mini-batch
+    for (k in 1:length(mini_batches)) {
+      # Create function (TODO!)
+      update_mini_batch(mini_batches[[k]])
+    }
+    # Logging
+    cat("Epoch: ", j, " complete")
+  }
+  
 }
+
+d <- rpois(73,5)
+mini_batch_size <- 5
+d_split <- split(d, ceiling(seq_along(d)/mini_batch_size))
 
 ###############################
 ## EVALUATE (Compare to Python)
+## I feed in the below values to python and
+## check that R script matches
 ###############################
+
+sizes <- c(3, 5, 2)
 
 biases <- list(
   matrix(c(-0.28080838, 
@@ -66,6 +95,21 @@ weights <- list(
 #[ 0.64309165  0.6703279   0.63000043]]
 result_test <- feedforward(0.5)
 dim(result_test)
-result_test
+result_test # CORRECT!
 
-# CORRECT!
+# Example of train_data
+train_data_0 <- list(
+  c(0.88607595, 
+     0.40506329,
+     0.59493671,
+     0.17721519),
+  c(0,1,0))
+train_data_1 <- list(
+  c(0.70886076, 
+    0.37974684,
+    0.56962025,
+    0.18987342),
+  c(0,1,0))
+
+training_data <- list(train_data_0, train_data_1)
+
