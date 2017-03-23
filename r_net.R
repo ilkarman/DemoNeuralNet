@@ -1,3 +1,5 @@
+# Seems to actually run ... happy surprise
+
 # NOTE to self: 
 #1. [-1] in R removes first element NOT takes last
 #2. for (i in 1:2) in R does include 2
@@ -18,21 +20,48 @@ train_data_1 <- list(
 
 training_data <- list(train_data_0, train_data_1)
 
+# RUN
+create_neural_net <- neuralnetwork(c(4, 7, 3))
+
+sizes <- create_neural_net[[1]]
+num_layers <- create_neural_net[[2]]
+biases <- create_neural_net[[3]]
+weights <- create_neural_net[[4]]
+
+print("Biase Before: ")
+print(biases)
+
+trained_net <- SGD(training_data=training_data,
+                   epochs=10, 
+                   mini_batch_size=1,
+                   lr=0.5,
+                   biases=biases, 
+                   weights=weights)
+
+print("Biase After: ")
+print(trained_net[[1]])
+
+################################################
+
+
 sigmoid <- function(z){1.0/(1.0+exp(-z))}
 
 sigmoid_prime <- function(z){sigmoid(z)*(1-sigmoid(z))}
 
 cost_derivative <- function(output_activations, y){output_activations-y}
 
+# Init neural-network
 neuralnetwork <- function(sizes)
 {
-  sizes <- c(4, 7, 3)  # DEBUG
   num_layers <- length(sizes)
   biases <- sapply(sizes[-1], function(f) {matrix(rnorm(n=f), nrow=f, ncol=1)})
   weights <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
     matrix(rnorm(n=f[1]*f[2]), nrow=f[2], ncol=f[1])})
+  # Return
+  list(sizes, num_layers, biases, weights)
 }
 
+# FF for scoring
 feedforward <- function(a)
 {
   for (f in 1:length(biases)){
@@ -54,10 +83,8 @@ feedforward <- function(a)
 # Complete (and tested up to this point) ...
 
 # Ignore validation data for now
-SGD <- function(training_data, epochs, mini_batch_size, lr)
+SGD <- function(training_data, epochs, mini_batch_size, lr, biases, weights)
 {
-  #epochs <- 10 # Debug
-  mini_batch_size <- 2 # Debug
   n <- length(training_data)
   for (j in 1:epochs){
     # Stochastic mini-batch
@@ -67,17 +94,21 @@ SGD <- function(training_data, epochs, mini_batch_size, lr)
                           ceiling(seq_along(training_data)/mini_batch_size))
     # Feed forward all mini-batch
     for (k in 1:length(mini_batches)) {
-      update_mini_batch(mini_batches[[k]])
+      res <- update_mini_batch(mini_batches[[k]], lr, biases, weights)
+      # Logging
+      cat("Updated: ", k, " mini-batches")
+      biases <- res[[1]]
+      weights <- res[[-1]]
     }
     # Logging
     cat("Epoch: ", j, " complete")
   }
+  # Return
+  list(biases, weights)
 }
 
-update_mini_batch <- function(mini_batch, lr)
+update_mini_batch <- function(mini_batch, lr, biases, weights)
 {
-  mini_batch <- mini_batches[[1]] # TEMP
-  lr <- 0.2 # TEMP
   nmb <- length(mini_batch)
   # Initialise updates with zero vectors
   nabla_b <- sapply(sizes[-1], function(f) {matrix(0, nrow=f, ncol=1)})
@@ -85,12 +116,10 @@ update_mini_batch <- function(mini_batch, lr)
     matrix(0, nrow=f[2], ncol=f[1])})
   # Go through mini_batch
   for (i in 1:nmb){
-    i <- 1 # temp
     x <- mini_batch[[i]][[1]]
     y <- mini_batch[[i]][[-1]]
-    
     # Back propogatoin will return delta
-    delta_nablas <- backprop(x, y)
+    delta_nablas <- backprop(x, y, biases, weights)
     delta_nabla_b <- delta_nablas[[1]]
     delta_nabla_w <- delta_nablas[[-1]]
     
@@ -113,9 +142,11 @@ update_mini_batch <- function(mini_batch, lr)
     unlist(weights[[j]])-(lr/nmb)*unlist(nabla_w[[j]]))
   biases <- lapply(seq_along(biases), function(j)
     unlist(biases[[j]])-(lr/nmb)*unlist(nabla_b[[j]]))
+  # Return
+  list(biases, weights)
 }
 
-backprop <- function(x, y)
+backprop <- function(x, y, biases, weights)
 {
 
   # Initialise updates with zero vectors
