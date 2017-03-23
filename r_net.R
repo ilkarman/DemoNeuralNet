@@ -9,15 +9,24 @@
 ################################################
 library(caret)
 
-x_data <- as.list(as.data.frame(t(iris[c(1:4)])))
-dmy <- dummyVars(" ~ Species", data=iris)
-y_data <- as.list(as.data.frame(t(predict(dmy, newdata = iris))))
+data_input <- as.data.frame(iris)
 
+# X (scale)
+scalemax <- function(x){x/max(x)}
+x_data <- as.list(as.data.frame(t(scalemax(data_input[c(1:4)]))))
+# y (one-hot-encode)
+dmy <- dummyVars(" ~ Species", data=data_input)
+y_data <- as.list(as.data.frame(t(predict(dmy, newdata = data_input))))
+
+# Create full data vector
 all_data <- list()
 for (i in 1:length(x_data)){
   all_data[[i]] <- c(x_data[i], y_data[i])
 }
 
+# Shufle
+all_data <- sample(all_data)
+# Split to training and test
 training_data <- all_data[1:100]
 testing_data <- all_data[101:150]
 
@@ -34,14 +43,19 @@ weights <- create_neural_net[[4]]
 trained_net <- SGD(training_data=training_data,
                    epochs=1000, 
                    mini_batch_size=10,
-                   lr=30,
+                   lr=0.3,
                    biases=biases, 
                    weights=weights)
 
 print("Biase After: ")
-print(trained_net[[1]])
+biases <- trained_net[[1]]
+#print(biases)
 print("Weights After: ")
-print(trained_net[[-1]])
+weights <- trained_net[[-1]]
+#print(weights)
+
+# Accuracy
+evaluate(testing_data, biases, weights)
 
 ################################################
 ## FUNCTIONS
@@ -57,31 +71,15 @@ cost_derivative <- function(output_activations, y){output_activations-y}
 neuralnetwork <- function(sizes)
 {
   num_layers <- length(sizes)
-  # FIX to reproduce python script
-  sizes <- c(4, 6, 3)
   biases <- sapply(sizes[-1], function(f) {matrix(rnorm(n=f), nrow=f, ncol=1)})
-  # FIX to reproduce python script
-  biases <- list(
-    matrix(c(2.21552528,0.56221113,1.29356006,0.20183309,-0.24909272,0.1880131),nrow=6, ncol=1, byrow=TRUE),
-    matrix(c(-0.55172029,0.62177897,0.54538667),nrow=3, ncol=1, byrow=TRUE))
   weights <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
     matrix(rnorm(n=f[1]*f[2]), nrow=f[2], ncol=f[1])})
-  # FIX to reproduce python script
-  weights <- list(
-    matrix(c(
-      -1.59478751, -1.49475559, -0.28792213, -1.49318205,
-      0.46775273,  0.55212408, -0.09821697,  2.16442781,
-      -1.09225776, -0.50294527,  0.6827888 ,  1.26445372,
-      0.05535019,  2.24894183,  1.76910817, -0.58362259,
-      -0.88872193,  1.77267107,  1.91067743,  1.1684327,
-      0.74813106, -0.28986976,  2.1845845 , -0.870942), nrow=6, ncol=4, byrow=TRUE),
-    matrix(c(
-      0.71380675, -1.1651045 , -0.44106224,
-      -0.46050179, -0.6196771, 1.02890824,
-      -0.04386169, -0.57472911,  0.64076485,
-      -0.34151746,  0.08611568, 0.6652118,
-      -1.01254895,  0.51042568, -1.09556564,
-      -0.67983253,  1.23153594, -1.24757605), nrow=3, ncol=6, byrow=TRUE))
+  # DEBUG
+  # Initialise at 0.5 to compare to python script
+  #biases <- sapply(sizes[-1], function(f) {matrix(0.5, nrow=f, ncol=1)})
+  #weights <- sapply(list(sizes[1:length(sizes)-1], sizes[-1]), function(f) {
+  #  matrix(0.5, nrow=f[2], ncol=f[1])})
+  # DEBUG
   # Return
   list(sizes, num_layers, biases, weights)
 }
@@ -90,9 +88,9 @@ neuralnetwork <- function(sizes)
 feedforward <- function(a)
 {
   for (f in 1:length(biases)){
+    a <- matrix(a, nrow=length(a), ncol=1)
     b <- biases[[f]]
     w <- weights[[f]]
-    
     # Seriously? All I want to replicate is:
     # (py) a = sigmoid(np.dot(w, a) + b)
     
@@ -113,7 +111,7 @@ SGD <- function(training_data, epochs, mini_batch_size, lr, biases, weights)
   n <- length(training_data)
   for (j in 1:epochs){
     # Stochastic mini-batch
-    #training_data <- sample(training_data)
+    training_data <- sample(training_data)
     # Partition set into mini-batches
     mini_batches <- split(training_data, 
                           ceiling(seq_along(training_data)/mini_batch_size))
@@ -121,7 +119,7 @@ SGD <- function(training_data, epochs, mini_batch_size, lr, biases, weights)
     for (k in 1:length(mini_batches)) {
       res <- update_mini_batch(mini_batches[[k]], lr, biases, weights)
       # Logging
-      cat("Updated: ", k, " mini-batches")
+      #cat("Updated: ", k, " mini-batches")
       biases <- res[[1]]
       weights <- res[[-1]]
     }
@@ -217,10 +215,21 @@ backprop <- function(x, y, biases, weights)
   return_nabla
 }
 
-# TODO!
-evaluate <- function(test_data) 
+evaluate <- function(testing_data, biases, weights)
 {
-  
+  predictions <- list()
+  truths <- list()
+  for (i in 1:length(testing_data)){
+    test_data_chunk <- testing_data[[i]]
+    test_x <- test_data_chunk[[1]]
+    test_y <- test_data_chunk[[-1]]
+    predictions[i] <- which.max(feedforward(test_x))
+    truths[i] <- which.max(test_y)
+  }
+  correct <-sum(mapply(function(x,y) x==y, predictions, truths))
+  total <- length(testing_data)
+  # Return accuracy
+  correct/total
 }
 
 
