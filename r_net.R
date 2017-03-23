@@ -51,8 +51,7 @@ SGD <- function(training_data, epochs, mini_batch_size, lr)
   }
 }
 
-# TODO!
-update_mini_batch(mini_batch, lr)
+update_mini_batch <- function(mini_batch, lr)
 {
   mini_batch <- mini_batches[[1]]  # DEBUG
   nmb <- length(mini_batch)
@@ -65,8 +64,10 @@ update_mini_batch(mini_batch, lr)
     x <- mini_batch[[i]][[1]]
     y <- mini_batch[[i]][[-1]]
     # Back propogatoin will return delta
+    
     # Create function (TODO!)
     delta_nablas <- backprop(x, y)
+    
     delta_nabla_b <- delta_nablas[[1]]
     delta_nabla_w <- delta_nablas[[-1]]
     nabla_b <- lapply(seq_along(biases),function(j)
@@ -76,10 +77,23 @@ update_mini_batch(mini_batch, lr)
   }
   # Opposite direction of gradient
   # TODO!!
-
+  # This should overwrite global (i.e. self.weights)
+  weights <- lapply(seq_along(weights), function(j)
+    unlist(weights[j])-(lr/nmb)*unlist(nabla_w[j]))
+  biases <- lapply(seq_along(biases), function(j)
+    unlist(biases[j])-(lr/nmb)*unlist(nabla_b[j]))
 }
 
-a, b <- c(1,2)
+# TODO!
+backprop <- function(x, y)
+{
+  
+}
+
+# TODO!
+evaluate <- function(test_data)
+
+cost_derivative <- function(output_activations, y){output_activations-y}
 
 ###############################
 ## EVALUATE (Compare to Python)
