@@ -2,13 +2,18 @@
 # Neural Network from scratch in R
 # Ilia 03.04.2017
 
+# Issues:
+# 1. Saving and loading doesn't seem to work
+
 # To-do:
-# 2. Add regularization
+# 2. Add regularization (L1 and L2)
 # 3. Add ReLU and Tanh activations
-# 4. Allow saving/loading trained models
+# 4. Saving/loading trained models
 # 5. Include more comments
 # 6. Include example on MNIST
-# 7. Allow better logging
+# 7. Better logging
+# 8. GGplot visualisation of cost
+# 9. Clean-up the back-prop code (all layers in one function)
 
 ################################################
 ## DATA FUNCTIONS
@@ -301,11 +306,25 @@ evaluate <- function(testing_data, biases, weights)
   table(as.vector(res$Prediction), as.vector(res$Truth))
 }
 
+# # Serialise bias and weights matrix, save layers
+# save_nn <- function(trained_net, file_path)
+# {
+#   save(list=trained_net, file=file_path)
+# }
+# 
+# # Load neural network
+# load_nn <- function(file_path)
+# {
+#   load(file=file_path)
+# }
 
 ##################################################################################################################
-## Example 1. RUN (MNIST) - 96% Accuracy
+## TEST HARNESSES
 ##################################################################################################################
 
+##################################################################################################################
+## Example 1. RUN (MNIST) - 97% Accuracy
+##################################################################################################################
 
 # Here we have splits for train-test already
 # Train
@@ -344,12 +363,32 @@ biases <- trained_net[[1]]
 weights <- trained_net[[-1]]
 
 # Accuracy (train)
-evaluate(training_data, biases, weights)
+evaluate(training_data, biases, weights)  #0.98
 # Accuracy (test)
-evaluate(testing_data, biases, weights)
+evaluate(testing_data, biases, weights)  #0.96
+
+# CONFUSION MATRIX
+#       1    2    3    4    5    6    7    8    9   10
+# 1   971    0    4    0    2    4    9    0    5    5
+# 2     0 1120    4    0    0    3    3    6    0    4
+# 3     1    1  968    1    2    0    0    9    2    0
+# 4     1    2   13  987    0   20    0    3    5   12
+# 5     2    0    9    0  954    1   11    3    5   15
+# 6     0    1    1    5    0  833    8    0    3    4
+# 7     0    3    3    0    3    5  920    0    3    3
+# 8     3    1   16    5    3    3    0  997    6   13
+# 9     2    7   14   11    3   15    7    2  944   10
+# 10    0    0    0    1   15    8    0    8    1  943
+
+# Saving and Loading don't work
+# Save network
+#save_nn(trained_net, 'mnistnn')
+
+# Clear memory, load and re-test
+#nn_from_disk <- load_nn('mnistnn')
 
 ################################################
-## Example 2. RUN (Iris)
+## Example 2. RUN (Iris) - 96%
 ################################################
 
 train_test_split <- train_test_from_df(df = iris, predict_col_index = 5, train_ratio = 0.7, scale_input = TRUE)
@@ -359,7 +398,7 @@ testing_data <- train_test_split[[2]]
 input_neurons <- length(training_data[[1]][[1]])
 output_neurons <- length(training_data[[1]][[-1]])
 
-create_neural_net <- neuralnetwork(c(input_neurons, 16, 4, output_neurons))
+create_neural_net <- neuralnetwork(c(input_neurons, 10, output_neurons))
 
 trained_net <- SGD(training_data=training_data,
                    testing_data=testing_data,
@@ -377,17 +416,19 @@ trained_net <- SGD(training_data=training_data,
 biases <- trained_net[[1]]
 weights <- trained_net[[-1]]
 
-?save
-
-
 # Accuracy (train)
-evaluate(training_data, biases, weights)
+evaluate(training_data, biases, weights)  #0.98
 # Accuracy (test)
-evaluate(testing_data, biases, weights)
+evaluate(testing_data, biases, weights)  #0.96
 
+# CONFUSION MATRIX
+#    1  2  3
+# 1 12  0  0
+# 2  0 14  0
+# 3  0  2 17
  
 ################################################
-## Example 3. RUN (Example Breast Cancer)
+## Example 3. RUN (Example Breast Cancer) - 96%
 ################################################
 #install.packages('mlbench')
 library(mlbench)
@@ -402,7 +443,7 @@ testing_data <- train_test_split[[2]]
 input_neurons <- length(training_data[[1]][[1]])
 output_neurons <- length(training_data[[1]][[-1]])
 
-create_neural_net <- neuralnetwork(c(input_neurons, 50, output_neurons))
+create_neural_net <- neuralnetwork(c(input_neurons, 10, 10, output_neurons))
 
 trained_net <- SGD(training_data=training_data,
                    testing_data=testing_data,
@@ -424,3 +465,11 @@ weights <- trained_net[[-1]]
 evaluate(training_data, biases, weights)
 # Accuracy (test)
 evaluate(testing_data, biases, weights)
+
+# CONFUSION MATRIX
+#     1   2
+# 1 118   4
+# 2   4  79
+
+# EOF
+
