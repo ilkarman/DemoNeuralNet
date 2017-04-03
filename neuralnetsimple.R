@@ -1,9 +1,83 @@
 # neuralnetsimple.R
 # Neural Network from scratch in R
-# Ilia 23.03.2017
+# Ilia 03.04.2017
+
+##########
+# Issues:
+# 1. Running Breast-Cancer after iris doesn't seem to work well (as if something remains in memory from iris)
+##########
+
+##########
+# To-do:
+# 1. Add Cross-Entropy loss
+# 2. Add regularization
+# 3. Add ReLU and Tanh activations
+# 4. Allow saving/loading trained models
+# 5. Include more comments
+# 6. Include example on MNIST
+# 7. Allow better logging
+##########
 
 ################################################
-## FUNCTIONS
+## DATA FUNCTIONS
+################################################
+
+# Return train, test lists in format for NN from input-dataframe
+train_test_from_df <- function(df, predict_col_index, train_ratio)
+{
+  # Helper functions
+  # Function to encode factor column as N-dummies
+  dmy <- function(df)
+  {
+    # Select only factor columns
+    factor_columns <- which(sapply(df, is.factor))
+    if (length(factor_columns) > 0)
+    {
+      # Split factors into dummies
+      dmy_enc <- model.matrix(~. + 0, data=df[factor_columns], 
+                              contrasts.arg = lapply(df[factor_columns], contrasts, contrasts=FALSE))
+      dmy_enc <- as.data.frame(dmy_enc)
+      # Attach factors to df
+      df <- cbind(df, dmy_enc)
+      # Delete original columns
+      df[c(factor_columns)] <- NULL
+    }
+    df
+  }
+  
+  # Function to standarise inputs to range(0, 1)
+  scalemax <- function(df)
+  {
+    numeric_columns <- which(sapply(df, is.numeric))
+    if (length(numeric_columns)){df[numeric_columns] <- lapply(df[numeric_columns], function(x){x/max(x)})}
+    df
+  }
+  
+  # Function to convert df to list of rows
+  listfromdf <- function(df){as.list(as.data.frame(t(df)))}
+  
+  
+  # Omit NAs (allow other options later)
+  df <- na.omit(df)
+  # Get list for X-data
+  X_data <- listfromdf(dmy(scalemax(df[-c(predict_col_index)])))
+  # Get list for y-data
+  y_data <- listfromdf(dmy(df[c(predict_col_index)]))
+  # Combine X,y
+  all_data <- list()
+  for (i in 1:length(X_data)){
+    all_data[[i]] <- c(X_data[i], y_data[i])
+  }
+  # Shuffle before splitting
+  all_data <- sample(all_data)
+  # Split to training and test
+  tr_n <- round(length(all_data)*train_ratio)
+  # Return (training, testing)
+  list(all_data[c(1:tr_n)], all_data[-c(1:tr_n)])
+}
+
+################################################
+## NN FUNCTIONS
 ################################################
 
 # Calculate activation function
@@ -74,8 +148,9 @@ SGD <- function(training_data, epochs, mini_batch_size, lr, biases, weights)
       weights <- res[[-1]]
     }
     # Logging
-    cat("Epoch: ", j, " complete")
+    #cat("Epoch: ", j, " complete")
   }
+  cat("Training complete")
   # Return trained biases and weights
   list(biases, weights)
 }
@@ -197,43 +272,29 @@ evaluate <- function(testing_data, biases, weights)
   }
   correct <- sum(mapply(function(x,y) x==y, predictions, truths))
   total <- length(testing_data)
-  # Return accuracy
-  correct/total
+  # Print accuracy
+  print(correct/total)
+  # Return confusion
+  res <- as.data.frame(cbind(t(as.data.frame(predictions)), t(as.data.frame(truths))))
+  colnames(res) <- c("Prediction", "Truth")
+  table(as.vector(res$Prediction), as.vector(res$Truth))
 }
 
-################################################
-## Load Data (rough, rewrite as loader function)
-################################################
-library(caret)
-
-data_input <- as.data.frame(iris)
-
-# X (scale)
-scalemax <- function(x){x/max(x)}
-x_data <- as.list(as.data.frame(t(scalemax(data_input[c(1:4)]))))
-# y (one-hot-encode)
-dmy <- dummyVars(" ~ Species", data=data_input)
-y_data <- as.list(as.data.frame(t(predict(dmy, newdata = data_input))))
-
-# Create full data vector (combining the X and y)
-all_data <- list()
-for (i in 1:length(x_data)){
-  all_data[[i]] <- c(x_data[i], y_data[i])
-}
-
-# Shuffle before splitting
-all_data <- sample(all_data)
-# Split to training and test
-training_data <- all_data[1:75]
-testing_data <- all_data[76:150]
 
 ################################################
-## RUN
+## RUN (Example Iris)
 ################################################
+# Example on iris data
+train_test_split <- train_test_from_df(df = iris, predict_col_index = 5, train_ratio = 0.5)
+training_data <- train_test_split[[1]]
+testing_data <- train_test_split[[2]]
+
+input_neurons <- length(training_data[[1]][[1]])
+output_neurons <- length(training_data[[1]][[-1]])
 
 # Step 1. Initialise nueral network (bias and weights for layers)
 # Tested only with one hidden layer
-create_neural_net <- neuralnetwork(c(4, 6, 4, 3))
+create_neural_net <- neuralnetwork(c(input_neurons, 6, 4, output_neurons))
 
 sizes <- create_neural_net[[1]]
 num_layers <- create_neural_net[[2]]
@@ -244,18 +305,60 @@ weights <- create_neural_net[[4]]
 trained_net <- SGD(training_data=training_data,
                    epochs=1000, 
                    mini_batch_size=10,
-                   lr=0.3,
+                   lr=0.2,
                    biases=biases, 
                    weights=weights)
 
-print("Biase After: ")
+# Trained matricies:
 biases <- trained_net[[1]]
-#print(biases)
-print("Weights After: ")
 weights <- trained_net[[-1]]
-#print(weights)
 
-# Accuracy
-evaluate(testing_data, biases, weights)  # 100% accuracy
+# Accuracy (train)
+evaluate(training_data, biases, weights)
+# Accuracy (test)
+evaluate(testing_data, biases, weights)
+
+################################################
+## RUN (Example Breast Cancer)
+################################################
+#install.packages('mlbench')
+library(mlbench)
+data("BreastCancer")
+df_in <- as.data.frame(BreastCancer)
+df_in$Id <- NULL
+
+train_test_split <- train_test_from_df(df = df_in, predict_col_index = 10, train_ratio = 0.5)
+training_data <- train_test_split[[1]]
+testing_data <- train_test_split[[2]]
+
+input_neurons <- length(training_data[[1]][[1]])
+output_neurons <- length(training_data[[1]][[-1]])
+
+# Step 1. Initialise nueral network (bias and weights for layers)
+# Tested only with one hidden layer
+create_neural_net <- neuralnetwork(c(input_neurons, 6, 4, output_neurons))
+
+sizes <- create_neural_net[[1]]
+num_layers <- create_neural_net[[2]]
+biases <- create_neural_net[[3]]
+weights <- create_neural_net[[4]]
+
+# Step 2. Train NN using SGD
+trained_net <- SGD(training_data=training_data,
+                   epochs=100, 
+                   mini_batch_size=50,
+                   lr=0.2,
+                   biases=biases, 
+                   weights=weights)
+
+# Trained matricies:
+biases <- trained_net[[1]]
+weights <- trained_net[[-1]]
+
+# Accuracy (train)
+evaluate(training_data, biases, weights)
+# Accuracy (test)
+evaluate(testing_data, biases, weights)
+
 
 
