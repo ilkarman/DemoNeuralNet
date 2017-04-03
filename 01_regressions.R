@@ -52,7 +52,7 @@ y_hat <- X_mat %*% beta_hat
 points(x=X, y=y_hat, pch = 2, col='yellow')
        
 #####################################################
-# 3. Linear Regression with SGD
+# 3. Linear Regression with GD
 #####################################################
 
 # Plot
