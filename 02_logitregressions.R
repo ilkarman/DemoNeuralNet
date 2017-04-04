@@ -2,6 +2,8 @@
 # Neural Network from scratch in R
 # Ilia 03.04.2017
 
+set.seed(1234567)
+
 #####################################################
 # 1. Logistic Regression in R
 #####################################################
@@ -13,18 +15,31 @@ data_df <- data_df[idx,]
 y <- ifelse(data_df$Species=="virginica",1,0)
 
 # For faster convergence let's rescale X
-X <- data_df[c(1:4)]
+# So that we can plot this consider only 2 variables
+X <- data_df[c(1,3)]
 X <- as.matrix(X/max(X))
 
 # Fit model
 model <- glm(y ~ X, family=binomial(link='logit'))
 
 # Params
-print(model)
+print(coef(model))
 # Coefficients:
-# (Intercept)  XSepal.Length   XSepal.Width  XPetal.Length   XPetal.Width  
-# -42.64         -19.48         -52.78          74.49         144.46  
+# (Intercept) XSepal.Length XPetal.Length 
+# -39.83851     -31.73243     105.16992 
 summary(model)
+
+# Visualise the decision boundary
+intcp <- coef(model)[1]/-(coef(model)[3])
+slope <- coef(model)[2]/-(coef(model)[3])
+
+# Our points
+plot(x=X[,1], y=X[,2], cex = 1, col=data_df$Species,
+     main = "Iris type by length and width", 
+     xlab = "Sepal Length", ylab = "Petal Length")
+legend(x='topright', legend=unique(data_df$Species),col=unique(data_df$Species), pch=1)
+# Decision boundary
+abline(intcp , slope, col='blue')
 
 #####################################################
 # 2. Logistic Regression with GD
@@ -34,10 +49,11 @@ summary(model)
 sigmoid <- function(z){1.0/(1.0+exp(-z))}
 
 # Calculate log-likelihood (easier to max than likelihood)
-log_likelihood <- function(X, y, beta_hat)
+log_likelihood <- function(X_mat, y, beta_hat)
 {
-  scores <- X %*% beta_hat
-  ll <- (y %*% scores) - log(1+exp(scores))
+  scores <- X_mat %*% beta_hat
+  # Need to broadcast (y %*% scores)
+  ll <- rep(y %*% scores, nrow(X_mat)) - log(1+exp(scores))
   sum(ll)
 }
 
@@ -59,10 +75,15 @@ logistic_reg <- function(X, y, epochs, lr)
 }
 
 # Takes a while to converge!
-beta_hat <- logistic_reg(X, y, 1000000, 10)
+beta_hat <- logistic_reg(X, y, 300000, 3)
 print(beta_hat)
-# -42.63778
-# Sepal.Length -19.47524
-# Sepal.Width  -52.77898
-# Petal.Length  74.49212
-# Petal.Width  144.46041
+
+# Intercept    -36.46195
+# Sepal.Length -28.80112
+# Petal.Length  95.94318
+
+# Visualise the decision boundary
+intcp <- beta_hat[1]/-(beta_hat[3])
+slope <- beta_hat[2]/-(beta_hat[3])
+
+abline(intcp , slope, col='purple')
