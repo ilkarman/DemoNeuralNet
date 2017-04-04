@@ -12,7 +12,7 @@ set.seed(1234567)
 data_df <- as.data.frame(iris)
 idx <- data_df$Species %in% c("virginica", "versicolor")
 data_df <- data_df[idx,]
-y <- ifelse(data_df$Species=="virginica",1,0)
+y <- ifelse(data_df$Species=="virginica", 1, 0)
 
 # For faster convergence let's rescale X
 # So that we can plot this consider only 2 variables
@@ -45,37 +45,9 @@ abline(intcp , slope, col='blue')
 # 2. Logistic Regression with GD
 #####################################################
 
-# Calculate activation function (sigmoid for logit)
-sigmoid <- function(z){1.0/(1.0+exp(-z))}
-
-# Calculate log-likelihood (easier to max than likelihood)
-log_likelihood <- function(X_mat, y, beta_hat)
-{
-  scores <- X_mat %*% beta_hat
-  # Need to broadcast (y %*% scores)
-  ll <- rep(y %*% scores, nrow(X_mat)) - log(1+exp(scores))
-  sum(ll)
-}
-
-logistic_reg <- function(X, y, epochs, lr)
-{
-  X_mat <- cbind(1, X)
-  beta_hat <- matrix(1, nrow=ncol(X_mat))
-  for (j in 1:epochs)
-  {
-    residual <- sigmoid(X_mat %*% beta_hat) - y
-    # Update weights with gradient
-    delta <- t(X_mat) %*% as.matrix(residual, ncol=nrow(X_mat)) *  (1/nrow(X_mat))
-    beta_hat <- beta_hat - (lr*delta)
-  }
-  # Print log-likliehood
-  print(log_likelihood(X_mat, y, beta_hat))
-  # Return
-  beta_hat
-}
 
 # Takes a while to converge!
-beta_hat <- logistic_reg(X, y, 300000, 3)
+beta_hat <- logistic_reg(X, y, 300000, 5)
 print(beta_hat)
 
 # Intercept    -36.46195

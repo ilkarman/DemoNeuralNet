@@ -1,6 +1,8 @@
 # regressions.R
 # Neural Network from scratch in R
-# Ilia 03.04.2017
+# Ilia 
+
+set.seed(1234567)
 
 ######################################################
 # 1. Linear Regression in R
