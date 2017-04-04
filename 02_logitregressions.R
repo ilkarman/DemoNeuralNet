@@ -10,25 +10,25 @@
 data_df <- as.data.frame(iris)
 idx <- data_df$Species %in% c("virginica", "versicolor")
 data_df <- data_df[idx,]
-data_df$y <- ifelse(data_df$Species=="virginica",1,0)
-data_df$Species <- NULL
+y <- ifelse(data_df$Species=="virginica",1,0)
+
+# For faster convergence let's rescale X
+X <- data_df[c(1:4)]
+X <- as.matrix(X/max(X))
 
 # Fit model
-model <- glm(y ~., family=binomial(link='logit'), data=data_df)
+model <- glm(y ~ X, family=binomial(link='logit'))
 
 # Params
 print(model)
 # Coefficients:
-# (Intercept)  Sepal.Length   Sepal.Width  Petal.Length   Petal.Width  
-# -42.638        -2.465        -6.681         9.429        18.286 
+# (Intercept)  XSepal.Length   XSepal.Width  XPetal.Length   XPetal.Width  
+# -42.64         -19.48         -52.78          74.49         144.46  
 summary(model)
 
 #####################################################
 # 2. Logistic Regression with GD
 #####################################################
-
-X <- data_df[c(1:4)]
-y <- data_df[-c(1:4)]
 
 # Calculate activation function (sigmoid for logit)
 sigmoid <- function(z){1.0/(1.0+exp(-z))}
@@ -43,19 +43,26 @@ log_likelihood <- function(X, y, beta_hat)
 
 logistic_reg <- function(X, y, epochs, lr)
 {
-  X_mat <- cbind(1, as.matrix(X))
+  X_mat <- cbind(1, X)
   beta_hat <- matrix(1, nrow=ncol(X_mat))
   for (j in 1:epochs)
   {
     residual <- sigmoid(X_mat %*% beta_hat) - y
     # Update weights with gradient
-    delta <- t(X_mat) %*% as.matrix(residual, ncol=nrow(X_mat))
+    delta <- t(X_mat) %*% as.matrix(residual, ncol=nrow(X_mat)) *  (1/nrow(X_mat))
     beta_hat <- beta_hat - (lr*delta)
   }
   # Print log-likliehood
-  #print(log_likelihood(X, y, beta_hat))
+  print(log_likelihood(X_mat, y, beta_hat))
   # Return
   beta_hat
 }
 
-beta_hat <- logistic_reg(X, y, 300000, 0.3)
+# Takes a while to converge!
+beta_hat <- logistic_reg(X, y, 1000000, 10)
+print(beta_hat)
+# -42.63778
+# Sepal.Length -19.47524
+# Sepal.Width  -52.77898
+# Petal.Length  74.49212
+# Petal.Width  144.46041
